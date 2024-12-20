@@ -9,6 +9,7 @@ export interface LowCodeAssetsWebpackPluginOptions extends LowCodeAssetsConfig {
   library: string;
   filename: string;
   metaFileName?: string;
+  viewFiles?: string[];
   relativePath?: string;
   files?: string[];
   isProd?: boolean;
@@ -38,6 +39,7 @@ export class LowCodeAssetsWebpackPlugin {
       mode,
       filename,
       metaFileName = 'meta.js',
+      viewFiles,
       npmInfo,
       library,
       isProd,
@@ -80,6 +82,7 @@ export class LowCodeAssetsWebpackPlugin {
                     (file) => !file.endsWith('.map') && !file.endsWith('env-setup.js')
                   )
                 ).map((file) => resolveUrl(file)),
+                editUrls: viewFiles?.map((file) => resolveUrl(file)),
               },
             ],
             components: [

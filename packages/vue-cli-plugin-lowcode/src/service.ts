@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import merge from 'webpack-merge';
 import _ from 'lodash';
 import { basename, relative, dirname } from 'path';
-import { formatStats, generateMetaEntry, generateViewEntry } from './utils';
+import { formatStats, generateMetaEntry, generateComponentsEntry, generateViewEntry } from './utils';
 import { LowCodeAssetsWebpackPlugin } from './plugins/assets';
 
 const nonNull = <T>(v: T): v is NonNullable<T> => !!v;
@@ -20,6 +20,7 @@ const servicePlugin: ServicePlugin = (api, options) => {
     externals = {},
     entry = 'src/index.ts',
     metaDir = dirname(entry),
+    viewDir = dirname(entry),
     library,
     ...restOptions
   } = getPluginOptions(options);
@@ -52,7 +53,8 @@ const servicePlugin: ServicePlugin = (api, options) => {
       : basename(entry).replace(/\.(jsx?|vue)$/, ''));
   const tempDir = api.resolve('node_modules/.lowcode-builder');
   const metaEntryName = '~entry-meta';
-  const viewEntryName = '~entry-components';
+  const componentsEntryName = '~entry-components';
+  const viewEntryName = '~entry-view';
 
   function getConfig(
     chunkName: string,
@@ -136,12 +138,13 @@ const servicePlugin: ServicePlugin = (api, options) => {
       logWithSpinner(`Building for ${mode} as library umd...`);
 
       const entries = {
-        view: api.resolve(entry),
+        components: api.resolve(entry),
         meta: await generateMetaEntry(tempDir, api.resolve(metaDir), npmInfo),
+        view: await generateViewEntry(tempDir, api.resolve(entry), api.resolve(viewDir)),
       };
       const relativePath = relative(api.service.context, targetDir);
       const webpackConfig = [
-        merge(getConfig('index', entries.view, libName), {
+        merge(getConfig('index', entries.components, libName), {
           plugins: [
             new LowCodeAssetsWebpackPlugin({
               ..._.omit(assetsConfig, 'localBaseUrl'),
@@ -150,11 +153,12 @@ const servicePlugin: ServicePlugin = (api, options) => {
               library: libName,
               filename: 'assets.json',
               metaFileName: 'meta.js',
+              viewFiles: ['view.js', 'view.css'],
               relativePath: relativePath,
             }),
           ],
         }),
-        merge(getConfig('index', entries.view, libName, 'min'), {
+        merge(getConfig('index', entries.components, libName, 'min'), {
           plugins: [
             new LowCodeAssetsWebpackPlugin({
               ..._.omit(assetsConfig, 'localBaseUrl'),
@@ -163,6 +167,7 @@ const servicePlugin: ServicePlugin = (api, options) => {
               library: libName,
               filename: 'assets.min.json',
               metaFileName: 'meta.min.js',
+              viewFiles: ['view.min.js', 'view.min.css'],
               relativePath: relativePath,
               isProd: true,
             }),
@@ -170,6 +175,8 @@ const servicePlugin: ServicePlugin = (api, options) => {
         }),
         getConfig('meta', entries.meta, `${libName}Meta`),
         getConfig('meta', entries.meta, `${libName}Meta`, 'min'),
+        getConfig('view', entries.view, libName),
+        getConfig('view', entries.view, libName, 'min'),
       ];
 
       if (args.clean) {
@@ -207,12 +214,18 @@ const servicePlugin: ServicePlugin = (api, options) => {
     },
     async (args, rawArgs) => {
       const entries = {
-        view: await generateViewEntry(tempDir, api.resolve(entry), libName),
+        components: await generateComponentsEntry(tempDir, api.resolve(entry), libName),
         meta: await generateMetaEntry(
           tempDir,
           api.resolve(metaDir),
           npmInfo,
           `${libName}Meta`
+        ),
+        view: await generateViewEntry(
+          tempDir,
+          api.resolve(entry),
+          api.resolve(viewDir),
+          libName
         ),
       };
       api.chainWebpack((chain) => {
@@ -229,8 +242,9 @@ const servicePlugin: ServicePlugin = (api, options) => {
           '@knxcloud/lowcode-vue-simulator-renderer': 'var window.LCVueSimulatorRenderer',
         });
         chain.entryPoints.delete('app');
-        chain.entry('index').add(viewEntryName).end().entry('meta').add(metaEntryName);
+        chain.entry('index').add(componentsEntryName).end().entry('view').add(viewEntryName).end().entry('meta').add(metaEntryName);
         chain.resolve.alias.merge({
+          [componentsEntryName]: entries.components,
           [viewEntryName]: entries.view,
           [metaEntryName]: entries.meta,
         });
@@ -245,6 +259,7 @@ const servicePlugin: ServicePlugin = (api, options) => {
             filename: 'assets.json',
             files: ['index.js'],
             metaFileName: 'meta.js',
+            viewFiles: ['view.js'],
             isProd: false,
           },
         ]);

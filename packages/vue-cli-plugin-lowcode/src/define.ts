@@ -1,6 +1,7 @@
 export interface LowCodePluginOptions {
   entry?: string;
   metaDir?: string;
+  viewDir?: string;
   library?: string;
   npmInfo?: LowCodeNpmInfo;
   externals?: Record<string, string>;

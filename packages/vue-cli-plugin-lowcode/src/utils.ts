@@ -10,11 +10,11 @@ export function slash(str: string) {
   return str && str.replace(/\\/g, '/');
 }
 
-export async function generateViewEntry(dir: string, file: string, globalName?: string) {
-  const compEntryPath = join(dir, 'view-entry.js');
+export async function generateComponentsEntry(dir: string, file: string, globalName?: string) {
+  const compEntryPath = join(dir, 'components-entry.js');
 
-  const code = `import * as view from '${slash(file)}'
-window['${globalName}'] = Object.assign({ __esModule: true }, view)`;
+  const code = `import * as components from '${slash(file)}'
+window['${globalName}'] = Object.assign({ __esModule: true }, components)`;
 
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
@@ -90,6 +90,47 @@ ${
   await writeFile(metaEntryPath, code);
 
   return metaEntryPath;
+}
+
+export async function generateViewEntry( dir: string, entryFile: string, viewContext: string, globalName?: string) {
+  const files = await glob(['**/view.{js,jsx,ts,tsx}', '**/*.view.{js,jsx,ts,tsx}'], {
+    cwd: slash(viewContext),
+    absolute: true,
+    onlyFiles: true,
+    ignore: ['node_modules'],
+  });
+  const imports = files.reduce((res, file, idx) => {
+    res[`view${idx}`] = file;
+    return res;
+  }, {} as Record<string, string>);
+
+  let code = '';
+  if (globalName) {
+    const importCode = Object.keys(imports)
+    .map((name) => `import * as ${name} from "${slash(imports[name])}"`)
+    .join('\n');
+    code = `import * as components from '${slash(entryFile)}'
+    ${importCode}
+    const allComponents = Object.assign({}, components, ${Object.keys(imports).join(',')})
+    window['${globalName}'] = Object.assign({ __esModule: true }, allComponents)
+  `;
+  } else {
+    const importCode = Object.keys(imports)
+    .map((name) => `export * from "${slash(imports[name])}"`)
+    .join('\n');
+    code = `${importCode}
+    export * from '${slash(entryFile)}'
+    `
+  }
+
+  const viewEntryPath = join(dir, 'view-entry.js');
+  if (!existsSync(dir)) {
+    await mkdir(dir, { recursive: true });
+  }
+
+  await writeFile(viewEntryPath, code);
+
+  return viewEntryPath;
 }
 
 export function formatStats(stats: Stats, dir: string, api: PluginAPI) {
