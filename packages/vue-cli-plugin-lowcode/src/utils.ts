@@ -93,7 +93,7 @@ ${
 }
 
 export async function generateViewEntry( dir: string, entryFile: string, viewContext: string, globalName?: string) {
-  const files = await glob(['**/view.{js,jsx,ts,tsx}', '**/*.view.{js,jsx,ts,tsx}'], {
+  const files = await glob(['**/view/index.{js,jsx,ts,tsx}', '**/view.{js,jsx,ts,tsx}', '**/*.view.{js,jsx,ts,tsx}'], {
     cwd: slash(viewContext),
     absolute: true,
     onlyFiles: true,
