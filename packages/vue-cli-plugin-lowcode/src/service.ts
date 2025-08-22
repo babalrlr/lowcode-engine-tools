@@ -111,12 +111,12 @@ const servicePlugin: ServicePlugin = (api, options) => {
         library: globalName,
         libraryTarget: 'umd',
         globalObject: `(typeof self !== 'undefined' ? self : this)`,
+        publicPath: '',
       },
       rawConfig.output,
       {
         filename: `${entryName}.js`,
         chunkFilename: `${entryName}.[name].js`,
-        publicPath: '',
       }
     );
 
