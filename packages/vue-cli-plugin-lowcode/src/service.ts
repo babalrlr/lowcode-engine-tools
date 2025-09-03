@@ -5,7 +5,12 @@ import fs from 'fs-extra';
 import merge from 'webpack-merge';
 import _ from 'lodash';
 import { basename, relative, dirname } from 'path';
-import { formatStats, generateMetaEntry, generateComponentsEntry, generateViewEntry } from './utils';
+import {
+  formatStats,
+  generateMetaEntry,
+  generateComponentsEntry,
+  generateViewEntry,
+} from './utils';
 import { LowCodeAssetsWebpackPlugin } from './plugins/assets';
 
 const nonNull = <T>(v: T): v is NonNullable<T> => !!v;
@@ -16,9 +21,9 @@ function getPluginOptions(options: ProjectOptions): LowCodePluginOptions {
 
 const servicePlugin: ServicePlugin = (api, options) => {
   const { serve } = api.service.commands;
+  const entry = 'src/index.ts';
   const {
     externals = {},
-    entry = 'src/index.ts',
     metaDir = dirname(entry),
     viewDir = dirname(entry),
     library,
@@ -242,7 +247,15 @@ const servicePlugin: ServicePlugin = (api, options) => {
           '@knxcloud/lowcode-vue-simulator-renderer': 'var window.LCVueSimulatorRenderer',
         });
         chain.entryPoints.delete('app');
-        chain.entry('index').add(componentsEntryName).end().entry('view').add(viewEntryName).end().entry('meta').add(metaEntryName);
+        chain
+          .entry('index')
+          .add(componentsEntryName)
+          .end()
+          .entry('view')
+          .add(viewEntryName)
+          .end()
+          .entry('meta')
+          .add(metaEntryName);
         chain.resolve.alias.merge({
           [componentsEntryName]: entries.components,
           [viewEntryName]: entries.view,

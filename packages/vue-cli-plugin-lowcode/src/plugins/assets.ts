@@ -81,7 +81,9 @@ export class LowCodeAssetsWebpackPlugin {
                   Object.keys(compilation.assets).filter(
                     (file) => !file.endsWith('.map') && !file.endsWith('env-setup.js')
                   )
-                ).map((file) => resolveUrl(file)),
+                )
+                  .map((file) => resolveUrl(file))
+                  .filter((file) => /index\.(min\.)?(js|css)$/.test(file)),
                 editUrls: viewFiles?.map((file) => resolveUrl(file)),
               },
             ],
