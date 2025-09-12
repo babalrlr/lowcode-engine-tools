@@ -115,11 +115,10 @@ export async function generateViewEntry( dir: string, entryFile: string, viewCon
     window['${globalName}'] = Object.assign({ __esModule: true }, allComponents)
   `;
   } else {
-    const importCode = Object.keys(imports)
-    .map((name) => `export * from "${slash(imports[name])}"`)
-    .join('\n');
+    const importCode = Object.keys(imports).map((name) => `const ${name} = require("${slash(imports[name])}")`).join("\n");
     code = `${importCode}
-    export * from '${slash(entryFile)}'
+    const components = require('${slash(entryFile)}')
+    module.exports = Object.assign({}, components, ${Object.keys(imports).join(',')})
     `
   }
 
